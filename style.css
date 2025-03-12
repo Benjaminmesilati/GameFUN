@@ -1,8 +1,18 @@
 body {
   margin: 0;
-  background: #70c5ce; /* sky blue */
+  background: #70c5ce; /* Sky blue */
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 100vh;
+  font-family: sans-serif;
+}
+
+#menu {
+  text-align: center;
+}
+
+canvas {
+  border: 2px solid #000;
+  background: #70c5ce;
 }
