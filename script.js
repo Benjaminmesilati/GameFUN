@@ -1,73 +1,129 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Pac-Man object with starting position and movement properties
-let pacman = {
-  x: canvas.width / 2,
+// Bird properties
+let bird = {
+  x: 50,
   y: canvas.height / 2,
   radius: 15,
-  angle: 0,
-  speed: 2,
-  dx: 2,
-  dy: 0
+  velocity: 0,
+  gravity: 0.5,
+  jumpStrength: -10,
 };
 
-// Handle arrow key input to change direction
+// Pipe properties
+let pipes = [];
+const pipeWidth = 50;
+const pipeGap = 150; // gap between the top and bottom pipes
+const pipeSpeed = 2;
+let frame = 0;
+
+// Listen for the space key to trigger a jump
 document.addEventListener('keydown', function(e) {
-  switch(e.key) {
-    case 'ArrowUp':
-      pacman.dx = 0;
-      pacman.dy = -pacman.speed;
-      break;
-    case 'ArrowDown':
-      pacman.dx = 0;
-      pacman.dy = pacman.speed;
-      break;
-    case 'ArrowLeft':
-      pacman.dx = -pacman.speed;
-      pacman.dy = 0;
-      pacman.angle = Math.PI; // face left
-      break;
-    case 'ArrowRight':
-      pacman.dx = pacman.speed;
-      pacman.dy = 0;
-      pacman.angle = 0; // face right
-      break;
+  if (e.code === 'Space') {
+    bird.velocity = bird.jumpStrength;
   }
 });
 
-// Draw Pac-Man with a simple mouth opening effect
-function drawPacman() {
-  const startAngle = pacman.angle + 0.25 * Math.PI;
-  const endAngle = pacman.angle + 1.75 * Math.PI;
-  ctx.beginPath();
-  ctx.moveTo(pacman.x, pacman.y);
-  ctx.arc(pacman.x, pacman.y, pacman.radius, startAngle, endAngle, false);
-  ctx.fillStyle = 'yellow';
-  ctx.fill();
-  ctx.closePath();
+// Function to create a new pair of pipes
+function createPipe() {
+  const minPipeHeight = 50;
+  const maxPipeHeight = canvas.height - pipeGap - minPipeHeight;
+  const topPipeHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1)) + minPipeHeight;
+  
+  // Top pipe
+  pipes.push({
+    x: canvas.width,
+    y: 0,
+    width: pipeWidth,
+    height: topPipeHeight
+  });
+  
+  // Bottom pipe
+  pipes.push({
+    x: canvas.width,
+    y: topPipeHeight + pipeGap,
+    width: pipeWidth,
+    height: canvas.height - (topPipeHeight + pipeGap)
+  });
 }
 
-// Update Pac-Man's position and wrap around the screen edges
+// Update game objects
 function update() {
-  pacman.x += pacman.dx;
-  pacman.y += pacman.dy;
+  frame++;
   
-  // Wrap around horizontally
-  if (pacman.x - pacman.radius > canvas.width) pacman.x = -pacman.radius;
-  if (pacman.x + pacman.radius < 0) pacman.x = canvas.width + pacman.radius;
+  // Apply gravity to bird and update its position
+  bird.velocity += bird.gravity;
+  bird.y += bird.velocity;
   
-  // Wrap around vertically
-  if (pacman.y - pacman.radius > canvas.height) pacman.y = -pacman.radius;
-  if (pacman.y + pacman.radius < 0) pacman.y = canvas.height + pacman.radius;
+  // Create new pipes at regular intervals
+  if (frame % 90 === 0) {
+    createPipe();
+  }
+  
+  // Move pipes to the left and remove offscreen pipes
+  for (let i = pipes.length - 1; i >= 0; i--) {
+    pipes[i].x -= pipeSpeed;
+    if (pipes[i].x + pipeWidth < 0) {
+      pipes.splice(i, 1);
+    }
+  }
+}
+
+// Check for collisions with pipes or the canvas boundaries
+function checkCollision() {
+  // Collision with top or bottom boundaries
+  if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) {
+    return true;
+  }
+  
+  // Collision with any pipe
+  for (let pipe of pipes) {
+    if (
+      bird.x + bird.radius > pipe.x &&
+      bird.x - bird.radius < pipe.x + pipe.width &&
+      bird.y + bird.radius > pipe.y &&
+      bird.y - bird.radius < pipe.y + pipe.height
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Draw the bird and pipes on the canvas
+function draw() {
+  // Clear the canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw the bird
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Draw the pipes
+  ctx.fillStyle = "green";
+  for (let pipe of pipes) {
+    ctx.fillRect(pipe.x, pipe.y, pipe.width, pipe.height);
+  }
 }
 
 // Main game loop
 function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
   update();
-  drawPacman();
-  requestAnimationFrame(gameLoop);
+  draw();
+  
+  if (checkCollision()) {
+    alert("Game Over!");
+    // Reset game state
+    bird.y = canvas.height / 2;
+    bird.velocity = 0;
+    pipes = [];
+    frame = 0;
+  } else {
+    requestAnimationFrame(gameLoop);
+  }
 }
 
 gameLoop();
